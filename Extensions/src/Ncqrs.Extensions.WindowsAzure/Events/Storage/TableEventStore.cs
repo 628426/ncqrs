@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Ncqrs;
 using Ncqrs.Eventing.Storage;
 using Microsoft.WindowsAzure;
 using Microsoft.WindowsAzure.StorageClient;
@@ -11,7 +12,7 @@ using Ncqrs.Eventing.Sourcing.Snapshotting;
 
 namespace Ncqrs.Extensions.WindowsAzure.Events.Storage {
     /// <summary>
-    /// An event store. Can store and load events from an <see cref="IEventSource"/>.
+    /// An event store. Can store and load events from an IEventSOurce
     /// </summary>
     /// <remarks>Implemented using Windows Azure Table Storage</remarks>
     public class TableEventStore : IEventStore {
@@ -37,7 +38,7 @@ namespace Ncqrs.Extensions.WindowsAzure.Events.Storage {
         /// <param name="minVersion">The minimum version number to be read.</param>
         /// <param name="maxVersion">The maximum version number to be read</param>
         /// <returns>All the events from the event source between specified version numbers.</returns>
-        public Eventing.CommittedEventStream ReadFrom(Guid id, long minVersion, long maxVersion) {
+        public Ncqrs.Eventing.CommittedEventStream ReadFrom(Guid id, long minVersion, long maxVersion) {
             if (!_createdTables.Contains(_tableName)) {
                 lock (_createdTables) {
                     if (!_createdTables.Contains(_tableName)) {
@@ -53,7 +54,7 @@ namespace Ncqrs.Extensions.WindowsAzure.Events.Storage {
                     &&
                     entity.RowKey.CompareTo(Utility.GetRowKey(minVersion)) >= 0 &&
                     entity.RowKey.CompareTo(Utility.GetRowKey(maxVersion)) <= 0).AsTableServiceQuery();
-            return new Eventing.CommittedEventStream(id,
+            return new Ncqrs.Eventing.CommittedEventStream(id,
                 eventStream.ToList().Select(e => new Ncqrs.Eventing.CommittedEvent(
                     e.CommitId,
                     e.EventIdentifier,
@@ -95,8 +96,13 @@ namespace Ncqrs.Extensions.WindowsAzure.Events.Storage {
             }
             lastSource.Version = lastVersion;
             context.UpdateObject(lastSource);
-            context.SaveChanges(SaveChangesOptions.Batch);
-
+            try {
+                context.SaveChanges(SaveChangesOptions.Batch);
+            } catch (DataServiceClientException) {
+                throw new ConcurrencyException(eventSourceId, initialVersion);
+            } catch (System.Data.Services.Client.DataServiceRequestException) {
+                throw new ConcurrencyException(eventSourceId, initialVersion);
+            }
         }
 
         /// <summary>
@@ -104,7 +110,7 @@ namespace Ncqrs.Extensions.WindowsAzure.Events.Storage {
         /// </summary>
         /// <exception cref="ConcurrencyException">Occurs when there is already a newer version of the event provider stored in the event store.</exception>
         /// <param name="eventStream">The <see cref="UncommittedEventStream"/> to commit.</param>
-        public void Store(Eventing.UncommittedEventStream eventStream) {
+        public void Store(Ncqrs.Eventing.UncommittedEventStream eventStream) {
             foreach(Guid eventSourceId in eventStream.Select(es => es.EventSourceId).Distinct()) {
                 SaveEvents(eventSourceId, eventStream.Where(es => es.EventSourceId == eventSourceId));
             }

@@ -10,7 +10,7 @@ using Ncqrs.Eventing.Sourcing;
 using Ncqrs.Eventing.Sourcing.Snapshotting;
 using System.Xml.Serialization;
 
-namespace Ncqrs.Extensions.WindowsAzure.Events.Storage {
+namespace Ncqrs.Extensions.WindowsAzure {
     public static class Utility {
         public static string GetRowKey(long value) {
             if (value < 0) {
@@ -29,7 +29,7 @@ namespace Ncqrs.Extensions.WindowsAzure.Events.Storage {
             if (!_tableNamesSetup.Contains(tableName) && account == Microsoft.WindowsAzure.CloudStorageAccount.DevelopmentStorageAccount) {
                 lock (_tableNamesSetup) {
                     if (!_tableNamesSetup.Contains(tableName)) {
-                        EventEntity ee = new EventEntity();
+                        Ncqrs.Extensions.WindowsAzure.Events.Storage.EventEntity ee = new Ncqrs.Extensions.WindowsAzure.Events.Storage.EventEntity();
                         ee.PartitionKey = Guid.NewGuid().ToString();
                         ee.RowKey = Guid.NewGuid().ToString();
                         ee.CommitId = Guid.NewGuid();
@@ -45,7 +45,7 @@ namespace Ncqrs.Extensions.WindowsAzure.Events.Storage {
                         context.DeleteObject(ee);
                         context.SaveChanges();
 
-                        EventSourceEntity es = new EventSourceEntity();
+                        Ncqrs.Extensions.WindowsAzure.Events.Storage.EventSourceEntity es = new Ncqrs.Extensions.WindowsAzure.Events.Storage.EventSourceEntity();
                         es.PartitionKey = Guid.NewGuid().ToString();
                         es.RowKey = Guid.NewGuid().ToString();
                         es.Version = 0;
