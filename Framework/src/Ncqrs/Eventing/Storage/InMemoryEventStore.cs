@@ -78,7 +78,8 @@ namespace Ncqrs.Eventing.Storage
         /// </summary>
         public ISnapshot GetSnapshot(Guid eventSourceId)
         {
-            return _snapshots[eventSourceId];
+            ISnapshot snapshot;
+            return _snapshots.TryGetValue(eventSourceId, out snapshot) ? snapshot : null;
         }
     }
 }
