@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FluentAssertions;
 using Ncqrs.Eventing.Sourcing;
+using Ncqrs.Eventing.Storage.NoDB.Tests.Fakes;
 using NUnit.Framework;
 using Ncqrs.Eventing.Storage;
 
@@ -99,6 +100,36 @@ namespace Ncqrs.Tests.Eventing.Storage
 
             events.Count().Should().Be(unionOfStoredEvents.Count());
             events.Should().BeEquivalentTo(unionOfStoredEvents);
+        }
+
+        [Test]
+        public void When_getting_a_snapshot_from_a_non_existing_event_source_the_result_should_be_null()
+        {
+            var eventSourceId = Guid.NewGuid();
+            var store = new InMemoryEventStore();
+
+            var snapshot = store.GetSnapshot(eventSourceId);
+
+            snapshot.Should().BeNull();
+        }
+
+        [Test]
+        public void When_getting_a_snapshot_that_was_saved_it_should_return_the_snapshot()
+        {
+            var eventSourceId = Guid.NewGuid();
+            var store = new InMemoryEventStore();
+            var expectedSnapshot = new TestSnapshot
+                                       {
+                                           EventSourceId = eventSourceId,
+                                           EventSourceVersion = 1,
+                                           Name = "Test"
+                                       };
+
+            store.SaveShapshot(expectedSnapshot);
+
+            var snapshot = store.GetSnapshot(eventSourceId);
+
+            snapshot.Should().Be(expectedSnapshot);
         }
     }
 }
